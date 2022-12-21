@@ -11,8 +11,8 @@ data_acquisition = 0 # 1 --> acquisition on, 0 --> no acquisition, only visualiz
 n = 1000 # no of lines to be read
 
 write_data = []
-file_name = "B1_data1_raw"
-file_name_2 = "B1_data1_analysed"
+file_name = "B1_data2_raw"
+file_name_2 = "B1_data2_analysed"
 data_save_directory = "C:\\Users\\samar\\OneDrive\\Desktop\\esp_test_time\\"
 #image_title = file_name + " Raw/State Data"
 image_title = file_name
