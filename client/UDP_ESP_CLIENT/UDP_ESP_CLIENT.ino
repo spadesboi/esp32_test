@@ -22,9 +22,9 @@ elapsedMillis timeout;
 void setup() {
   Serial.begin(115200);
 
-//  WiFi.begin("MadhusudhanRamesh", "spadesboi");
+  //  WiFi.begin("MadhusudhanRamesh", "spadesboi");
 //  WiFi.begin("TP-Link_35E3", "msort@flexli");
-  WiFi.begin("TP-Link_B61A", "msort@flexli");
+    WiFi.begin("TP-Link_B61A", "msort@flexli");
 
   Serial.println("");
 
@@ -45,15 +45,17 @@ void setup() {
 
 void loop()
 {
-  start_time = millis();
-  msg = String(count) + "_" + String(start_time);
-  char *x = (char *)msg.c_str();
+  while (count < 1001) {
+    start_time = millis();
+    msg = String(count) + "_" + String(start_time);
+    msg2 = "";
+    char *x = (char *)msg.c_str();
 
-  UdpSend(x, "255.255.255.255", 20001);
+    UdpSend(x, "255.255.255.255", 20001);
 
-  UdpWaitAndRecive();
-  count++;
-
+    UdpWaitAndRecive();
+    count++;
+  }
 }
 
 
@@ -83,9 +85,6 @@ void UdpWaitAndRecive() {
         timeout = 100;
       }
       else {
-        //        Serial.println("Comparison not successful");
-        //        Serial.println(msg);
-        //        Serial.println(incomingPacket);
         msg2 = msg + "_" + String(time_diff);
       }
     }
