@@ -11,9 +11,9 @@ data_acquisition = 0 # 1 --> acquisition on, 0 --> no acquisition, only visualiz
 n = 1000 # no of lines to be read
 
 write_data = []
-file_name = "B1_data4_raw"
-file_name_2 = "B1_data4_analysed"
-data_save_directory = "C:\\Users\\samar\\OneDrive\\Desktop\\esp32_test\\data_visualization\\"
+file_name = "B1_data6_raw"
+file_name_2 = "B1_data6_analysed"
+data_save_directory = "C:\\github\\esp32_test\\data_visualization\\"
 #image_title = file_name + " Raw/State Data"
 image_title = file_name
 currentVal = []
@@ -34,7 +34,7 @@ if data_acquisition == 1:
     # <editor-fold desc="Setup Serial communication with Arduino ...">
     while not arduino_connection_status:
         try:
-            arduino_serial = serial.Serial('COM6', 115200, timeout=1)
+            arduino_serial = serial.Serial('COM3', 115200, timeout=1)
             arduino_connection_status = 1
             arduino_serial.reset_input_buffer()
             print("Arduino connected...")
@@ -91,7 +91,7 @@ if data_acquisition == 0:
 
 
     axs1.set_title(image_title)
-    slots=[0,5,10,15,20,25,30,35,40,45,50,55,60]
+    slots=[0,2,5,10,15]
     axs2.hist(time_to_ping,slots)
     print("totoal number of packets lost    ",len(dropped_packet) ," total packet loss %  ", len(dropped_packet)/n , "dropped counts are    ", dropped_packet)
     #plt.legend()
