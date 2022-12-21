@@ -62,6 +62,7 @@ if data_acquisition == 1:
 
 #------------------visualizing data---------------------
 
+image_title = "ESP32 packet send and receive time"
 count_arr = []
 time_to_ping = []
 if data_acquisition == 0:
@@ -72,8 +73,8 @@ if data_acquisition == 0:
     #     print(read_data)
         for i in range(3,1000):
             final_split = read_data[i].split('_')
-            count_arr.append(final_split[0])
-            time_to_ping.append(final_split[2])
+            count_arr.append(int(final_split[0]))
+            time_to_ping.append(int(final_split[2]))
 
         print("Data analysing succesful.")
     #sys.exit()
@@ -94,7 +95,7 @@ if data_acquisition == 0:
     # plt.plot(read_data[1][:], color='b', label='R2 thr')
     # plt.plot(read_data[2][:], color='y', label='R3 thr')
 
-    #plt.title(image_title)
+    plt.title(image_title)
     #plt.legend()
     plt.savefig(data_save_directory+file_name_2+".png")
     plt.grid(True)
