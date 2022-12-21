@@ -11,9 +11,9 @@ data_acquisition = 0 # 1 --> acquisition on, 0 --> no acquisition, only visualiz
 n = 1000 # no of lines to be read
 
 write_data = []
-file_name = "B1_data1_raw"
-file_name_2 = "B1_data1_analysed"
-data_save_directory = "C:\\github\\esp32_test\\data_visualization\\"
+file_name = "B1_data4_raw"
+file_name_2 = "B1_data4_analysed"
+data_save_directory = "C:\\Users\\samar\\OneDrive\\Desktop\\esp32_test\\data_visualization\\"
 #image_title = file_name + " Raw/State Data"
 image_title = file_name
 currentVal = []
@@ -72,7 +72,8 @@ if data_acquisition == 0:
     with open(data_save_directory+file_name+".json","r") as readfile:
         read_data = json.load(readfile)
         read_data = np.array(read_data, object).T.tolist()
-        for i in range(3,1000):
+        print(len(read_data))
+        for i in range(9,len(read_data)):
             final_split = read_data[i].split('_')
             count_arr.append(int(final_split[0]))
             time_to_ping.append(int(final_split[2]))
