@@ -13,7 +13,7 @@ n = 1000 # no of lines to be read
 write_data = []
 file_name = "B1_data1_raw"
 file_name_2 = "B1_data1_analysed"
-data_save_directory = "C:\\Users\\samar\\OneDrive\\Desktop\\esp_test_time\\"
+data_save_directory = "C:\\github\\esp32_test\\data_visualization\\"
 #image_title = file_name + " Raw/State Data"
 image_title = file_name
 currentVal = []
@@ -65,37 +65,34 @@ if data_acquisition == 1:
 image_title = "ESP32 packet send and receive time"
 count_arr = []
 time_to_ping = []
+dropped_packet=[]
+lastcount=0
 if data_acquisition == 0:
     print("Analysing data")
     with open(data_save_directory+file_name+".json","r") as readfile:
         read_data = json.load(readfile)
-        read_data = np.array(read_data, object).T.tolist() # convert read data to nparray, use T attribute to transpose and convert back to list
-    #     print(read_data)
+        read_data = np.array(read_data, object).T.tolist()
         for i in range(3,1000):
             final_split = read_data[i].split('_')
             count_arr.append(int(final_split[0]))
             time_to_ping.append(int(final_split[2]))
+            if int(final_split[0])== lastcount:
+                print("count repeated",final_split[0])
+            lastcount=int(final_split[0])
+            if int(final_split[2])==0:
+                dropped_packet.append(int(final_split[0]))
 
         print("Data analysing succesful.")
-    #sys.exit()
+        print(count_arr,len(count_arr))
+    fig, (axs1,axs2) = plt.subplots(2)
+    axs1.plot(time_to_ping, color='b', label='ping_time')
+    # axs1.ylim([0,50])
 
-    # Adapt the plot as required everytime before running
-    # to plot R1/R2/R3 values and states
-    # plt.plot(count_arr, color='r', label='Packet')
-    plt.plot(time_to_ping, color='b', label='ping_time')
-    plt.ylim([0,50])
-#     plt.plot(currentValue, color='b', label='R2 value')
-    #plt.plot(read_data[5][:], color='y', label='R3 value')
-    #plt.plot([x for x in range(0,n)], [x*100 for x in read_data[0][:]], color='r', label='R1 state')
-    #plt.plot([x for x in range(0,n)], [x*200 for x in read_data[1][:]], color='b', label='R2 state')
-    #plt.plot([x for x in range(0,n)], [x*300 for x in read_data[2][:]], color='y', label='R3 state')
 
-    # to plot R1/R2/R3 thresholds
-    # plt.plot(read_data[0][:], color='r', label='R1 thr')
-    # plt.plot(read_data[1][:], color='b', label='R2 thr')
-    # plt.plot(read_data[2][:], color='y', label='R3 thr')
-
-    plt.title(image_title)
+    axs1.set_title(image_title)
+    slots=[0,5,10,15,20,25,30,35,40,45,50,55,60]
+    axs2.hist(time_to_ping,slots)
+    print("totoal number of packets lost    ",len(dropped_packet) ," total packet loss %  ", len(dropped_packet)/n , "dropped counts are    ", dropped_packet)
     #plt.legend()
     plt.savefig(data_save_directory+file_name_2+".png")
     plt.grid(True)
