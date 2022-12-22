@@ -21,7 +21,7 @@ elapsedMillis timeout;
 
 void setup() {
   Serial.begin(115200);
-
+  Freq = getCpuFrequencyMhz();
   //  WiFi.begin("MadhusudhanRamesh", "spadesboi");
 //  WiFi.begin("TP-Link_35E3", "msort@flexli");
     WiFi.begin("TP-Link_B61A", "msort@flexli");
@@ -86,6 +86,7 @@ void UdpWaitAndRecive() {
       }
       else {
         msg2 = msg + "_" + String(time_diff);
+        timeout = 100;
       }
     }
   }
