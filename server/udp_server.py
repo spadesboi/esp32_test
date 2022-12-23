@@ -1,21 +1,22 @@
 import socket
 import time
-
+localip="192"
 localPort = 20001
 UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,socket.IPPROTO_UDP)
-UDPServerSocket.bind(("", localPort))
-print("listening")
+# UDPServerSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+UDPServerSocket.bind(("192.168.0.103", localPort))
 count=0
 timeout = 60
 timeout_start = time.time()
 while True:
-    bytesAddressPair = UDPServerSocket.recvfrom(1024)
+    bytesAddressPair = UDPServerSocket.recvfrom(100)
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
     message=message.decode()
     clientMsg = str(message)
     # clientIP = "Client IP Address:{}".format(address)
-    print(clientMsg)
+    print(address,clientMsg)
     # print(clientMsg.encode())
     # print(clientIP)   
     # print("count",count)
@@ -23,7 +24,7 @@ while True:
     # if count > 1000:
     #     UDPServerSocket.sendto(str.encode("start"), address)
     # else:
-    
+     
     UDPServerSocket.sendto(clientMsg.encode(), address)
    
 # import socket
