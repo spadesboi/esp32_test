@@ -11,8 +11,8 @@ data_acquisition = 1 # 1 --> acquisition on, 0 --> no acquisition, only visualiz
 n = 1000 # no of lines to be read
 
 write_data = []
-file_name = "B1_test_raw"
-file_name_2 = "B1_test_analysed"
+file_name = "B1_exp5_raw"
+file_name_2 = "B1_exp5_analysed"
 data_save_directory = "C:\\github\\esp32_test\\data_visualization\\"
 #image_title = file_name + " Raw/State Data"
 image_title = file_name
@@ -25,7 +25,7 @@ sensitivity = 0.1
 # count = 0
 
 
-if data_acquisition == 1:
+if True:
 # Data Acquisition
     arduino_serial = None  # serial object
     arduino_connection_status: int = 0  # 1 if Arduino Serial connected, else 0
@@ -34,14 +34,14 @@ if data_acquisition == 1:
     # <editor-fold desc="Setup Serial communication with Arduino ...">
     while not arduino_connection_status:
         try:
-            arduino_serial = serial.Serial('COM3', 115200, timeout=1)
+            arduino_serial = serial.Serial('COM4', 115200, timeout=1)
             arduino_connection_status = 1
             arduino_serial.reset_input_buffer()
             print("Arduino connected...")
         except:
             print("Arduino not connected. Retrying...")
             time.sleep(1)
-    while arduino_serial_counter < 1300: 
+    while True: 
         
         #try:
             if arduino_serial.in_waiting > 0:
@@ -63,7 +63,7 @@ if data_acquisition == 1:
 
 #------------------visualizing data---------------------
 
-image_title = "ESP32 EXP1a  (Wired PC) "
+image_title = "ESP32 EXP1a  (80mhZ) "
 count_arr = []
 time_to_ping = []
 dropped_packet=[]
@@ -74,8 +74,8 @@ if data_acquisition == 0:
     with open(data_save_directory+file_name+".json","r") as readfile:
         read_data = json.load(readfile)
         read_data = np.array(read_data, object).T.tolist()
-        print(len(read_data))
-        for i in range(20,len(read_data)):
+        
+        for i in range(3,len(read_data)):
             final_split = read_data[i].split('_')
             count_arr.append(int(final_split[0]))
             time_to_ping.append(int(final_split[2]))
@@ -87,16 +87,15 @@ if data_acquisition == 0:
             avglat+=int(final_split[2])
 
         print("Data analysing succesful.")
-        print(count_arr,len(count_arr))
     fig, (axs1,axs2) = plt.subplots(2)
     axs1.plot(time_to_ping, color='b', label='ping_time')
     # axs1.ylim([0,50])
 
 
     axs1.set_title(image_title)
-    slots=[0,2,5,10,15]
+    slots=[0,1,2,4,6,8,10,12,14,16,18,20,30,40,50]
     axs2.hist(time_to_ping,slots)
-    print("totoal number of packets lost    ",len(dropped_packet) ," total packet loss %  ", len(dropped_packet)/n , "dropped counts are    ", dropped_packet, "average latency ",avglat/len(time_to_ping))
+    print("totoal number of packets lost    ",len(dropped_packet) ," total packet loss %  ", len(dropped_packet)/n ,  "average latency ",avglat/len(time_to_ping))
     #plt.legend()
     plt.savefig(data_save_directory+file_name_2+".png")
     plt.grid(True)
