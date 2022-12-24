@@ -3,32 +3,36 @@
 #include <elapsedMillis.h>
 #include <bits/stdc++.h>
 #include <EEPROM.h>
+// #include "AsyncUDP.h"
 
-const char * udpAddress = "255.255.255.255";
+const char *udpAddress = "192.168.0.200";
 const int udpPort = 20001;
 String msg = "";
 String msg2 = "";
 uint32_t start_time = 0;
 uint32_t time_diff = 0;
-uint32_t count = 0;
+uint32_t count = 100000;
 int len = 0;
+int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
 WiFiUDP udp;
-elapsedMillis timeout;
+// AsyncUDP udp;
+elapsedMillis timer;
 
 void setup() {
+
+  setCpuFrequencyMhz(240);
   Serial.begin(115200);
-    if (!EEPROM.begin(1000)) {
+  if (!EEPROM.begin(1000)) {
     Serial.println("Failed to initialise EEPROM");
     Serial.println("Restarting...");
     delay(1000);
     ESP.restart();
-  }
-  else{
+  } else {
     Serial.println("EEPROM working fine");
   }
   int ip1 = EEPROM.readInt(0);
@@ -36,13 +40,17 @@ void setup() {
   int ip3 = EEPROM.readInt(8);
   int ip4 = EEPROM.readInt(12);
   IPAddress staticIP(ip1, ip2, ip3, ip4);
-
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
   if (WiFi.config(staticIP, gateway, subnet, dns, dns) == false) {
     Serial.println("Configuration failed.");
   }
-    WiFi.begin("TP-Link_B61A", "msort@flexli");
+  // udp.setTimeout(100);
+  WiFi.begin("TP-Link_B61A", "msort@flexli");
 
   Serial.println("");
+
+  // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -56,35 +64,32 @@ void setup() {
 }
 
 
-void loop()
-{
-  while (count < 1001) {
+void loop() {
+  while (count < 200001) {
     start_time = millis();
     msg = String(count) + "_" + String(start_time);
     msg2 = "";
     char *x = (char *)msg.c_str();
 
-    UdpSend(x, "255.255.255.255", 20001);
+    UdpSend(x, "192.168.0.200", 20001);
 
     UdpWaitAndRecive();
     count++;
-    
-    if(count==1001){
-      String temp="";
-      for(int i =0; i<21;i++){
-        Serial.println(i);
-        Serial.println(dataArr[i]);
-        temp=temp+"_"+String(i)+":"+String(dataArr[i]);
+
+    if (count == 200001) {
+      String temp = "";
+      for (int i = 0; i < 21; i++) {
+        temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
       }
-      Serial.println(temp);
+      temp=temp+"_"+String(millis());
       EEPROM.writeString(16, temp);
-        EEPROM.commit();
+      EEPROM.commit();
     }
   }
 }
 
 
-void UdpSend(const char* message, const char * ipaddress, int port) {
+void UdpSend(const char *message, const char *ipaddress, int port) {
   udp.beginPacket(ipaddress, port);
   udp.print(message);
   udp.endPacket();
@@ -93,29 +98,33 @@ void UdpSend(const char* message, const char * ipaddress, int port) {
 
 void UdpWaitAndRecive() {
   char incomingPacket[255];
-  bool readPacket = false;
-  timeout = 0;
-  while (timeout < 50) {
+  timer = 0;
+  bool flag = false;
+  while (timer < timeout) {
     int packetSize = udp.parsePacket();
-    if (packetSize)
-    {
+    if (packetSize) {
       len = udp.read(incomingPacket, 255);
-      if (len > 0)
-      {
+      if (len > 0) {
         incomingPacket[len] = 0;
       }
       if (String(incomingPacket) == msg) {
         time_diff = millis() - start_time;
         msg = msg + "_" + String(time_diff);
-        timeout = 100;
-      }
-      else {
-        msg2 = msg + "_" + String(time_diff);
-        timeout = 100;
+        timer = timeout;
+        flag = true;
+      } else {
+        msg2 = msg + "_" + String(millis() - start_time);
+        Serial.print("discarded packet : ");
+        Serial.println(String(incomingPacket));
+        timer = 0;
       }
     }
   }
+  if (!flag) {
+    Serial.println("timeout");
+  }
   if (time_diff > 0) {
+
     Serial.println(msg);
     if (time_diff < 5) {
       dataArr[1]++;
@@ -160,11 +169,9 @@ void UdpWaitAndRecive() {
     } else if (time_diff < 100) {
       dataArr[20]++;
     }
-  }
-  else {
+  } else {
     Serial.println(msg2);
     dataArr[0]++;
   }
   time_diff = 0;
-
 }

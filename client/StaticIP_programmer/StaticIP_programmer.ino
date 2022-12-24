@@ -12,7 +12,7 @@ void setup() {
   EEPROM.writeInt(0, 192);
   EEPROM.writeInt(4, 168);
   EEPROM.writeInt(8, 0);
-  EEPROM.writeInt(12, 106);
+  EEPROM.writeInt(12, 111);
   EEPROM.commit();
   delay(1000);
   Serial.println(EEPROM.readInt(0));

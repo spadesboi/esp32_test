@@ -2,12 +2,12 @@ import socket
 import time
 localip="192"
 localPort = 20001
-UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,socket.IPPROTO_UDP)
+UDPServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM )
 # UDPServerSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
-UDPServerSocket.bind(("192.168.0.103", localPort))
+UDPServerSocket.bind(("192.168.0.200", localPort))
 count=0
-timeout = 60
+
 timeout_start = time.time()
 while True:
     bytesAddressPair = UDPServerSocket.recvfrom(100)
