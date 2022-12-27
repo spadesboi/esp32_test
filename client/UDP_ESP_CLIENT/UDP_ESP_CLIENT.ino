@@ -61,6 +61,8 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   udp.begin(udpPort);
+  Serial.println(EEPROM. readString(16));
+  delay(1000);
 }
 
 
@@ -74,6 +76,7 @@ void loop() {
     UdpSend(x, "192.168.0.200", 20001);
 
     UdpWaitAndRecive();
+    delay(10);
     count++;
 
     if (count == 200001) {
@@ -114,8 +117,8 @@ void UdpWaitAndRecive() {
         flag = true;
       } else {
         msg2 = msg + "_" + String(millis() - start_time);
-        Serial.print("discarded packet : ");
-        Serial.println(String(incomingPacket));
+        // Serial.print("discarded packet : ");
+        // Serial.println(String(incomingPacket));
         timer = 0;
       }
     }
@@ -125,7 +128,7 @@ void UdpWaitAndRecive() {
   }
   if (time_diff > 0) {
 
-    Serial.println(msg);
+    // Serial.println(msg);
     if (time_diff < 5) {
       dataArr[1]++;
     } else if (time_diff < 10) {
@@ -170,7 +173,7 @@ void UdpWaitAndRecive() {
       dataArr[20]++;
     }
   } else {
-    Serial.println(msg2);
+    // Serial.println(msg2);
     dataArr[0]++;
   }
   time_diff = 0;
