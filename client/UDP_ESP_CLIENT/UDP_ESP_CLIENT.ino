@@ -11,18 +11,21 @@ String msg = "";
 String msg2 = "";
 uint32_t start_time = 0;
 uint32_t time_diff = 0;
-uint32_t count = 100000;
+uint32_t count = 0;
 int len = 0;
+int avgClock = 0;
 int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
+int delayTime = 0;
+int prevMilies = 0;
+int datapoints=100000;
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
 WiFiUDP udp;
 // AsyncUDP udp;
 elapsedMillis timer;
-
+elapsedMillis internalclock;
 void setup() {
 
   setCpuFrequencyMhz(240);
@@ -55,36 +58,38 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("");
+  Serial.println( millis());
   Serial.print("Connected");
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   udp.begin(udpPort);
-  Serial.println(EEPROM. readString(16));
+  Serial.println(EEPROM.readString(16));
   delay(1000);
 }
 
 
 void loop() {
-  while (count < 200001) {
+  while (count < datapoints+1) {
     start_time = millis();
-    msg = String(count) + "_" + String(start_time);
+    msg = String(count+datapoints) + "_" + String(start_time);
     msg2 = "";
     char *x = (char *)msg.c_str();
-
+    internalclock = 0;
     UdpSend(x, "192.168.0.200", 20001);
-
     UdpWaitAndRecive();
-    delay(10);
-    count++;
+    avgClock = avgClock + internalclock;
+    prevMilies=millis();
+    while (millis() < prevMilies + delayTime) {
 
-    if (count == 200001) {
+    }
+    count++; 
+    if (count == datapoints+1) {
       String temp = "";
       for (int i = 0; i < 21; i++) {
         temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
       }
-      temp=temp+"_"+String(millis());
+      temp = temp + "_" + String(avgClock / datapoints)+ "_" + String(millis());
       EEPROM.writeString(16, temp);
       EEPROM.commit();
     }
@@ -126,7 +131,7 @@ void UdpWaitAndRecive() {
   if (!flag) {
     Serial.println("timeout");
   }
-  if (time_diff > 0) {
+  if (time_diff <101) {
 
     // Serial.println(msg);
     if (time_diff < 5) {
@@ -176,5 +181,5 @@ void UdpWaitAndRecive() {
     // Serial.println(msg2);
     dataArr[0]++;
   }
-  time_diff = 0;
+  time_diff = 101;
 }
