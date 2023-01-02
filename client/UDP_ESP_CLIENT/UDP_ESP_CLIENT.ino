@@ -16,9 +16,9 @@ int len = 0;
 int avgClock = 0;
 int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int delayTime = 500;
+int delayTime = 100;
 int prevMilies = 0;
-int datapoints = 1000;
+int datapoints = 10000;
 int signalStrngth=0;
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
@@ -108,7 +108,7 @@ void loop() {
         for (int i = 0; i < 21; i++) {
           temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
         }
-        temp = temp + "_" + String(avgClock / datapoints) + "_" + String(millis()+"_" + String(signalStrngth);
+        temp = temp + "_" + String(avgClock / datapoints) + "_" + String(millis()+"_" + String(signalStrngth));
         EEPROM.writeString(20, temp);
         int programCount = EEPROM.readInt(16);
         programCount++;
