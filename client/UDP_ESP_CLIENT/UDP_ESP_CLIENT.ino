@@ -16,9 +16,9 @@ int len = 0;
 int avgClock = 0;
 int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int delayTime = 0;
+int delayTime = 500;
 int prevMilies = 0;
-int datapoints=100000;
+int datapoints = 1000;
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
@@ -37,7 +37,10 @@ void setup() {
     ESP.restart();
   } else {
     Serial.println("EEPROM working fine");
+    Serial.println(EEPROM.readInt(16));
+    Serial.println(EEPROM.readString(20));
   }
+
   int ip1 = EEPROM.readInt(0);
   int ip2 = EEPROM.readInt(4);
   int ip3 = EEPROM.readInt(8);
@@ -54,44 +57,64 @@ void setup() {
   Serial.println("");
 
   // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  for (int i = 0; i < 7; i++) {
+    if (i == 6) {
+      ESP.restart();
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    else {
+      i = 10;
+    }
   }
   Serial.println( millis());
   Serial.print("Connected");
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+   Serial.print("wifi strength ");
+  Serial.println(WiFi.RSSI());
   udp.begin(udpPort);
-  Serial.println(EEPROM.readString(16));
-  delay(1000);
+  int randDelay = random(400, 1000);
+  prevMilies = millis();
+  while (millis() < prevMilies + randDelay) {
+  }
 }
 
 
 void loop() {
-  while (count < datapoints+1) {
-    start_time = millis();
-    msg = String(count+datapoints) + "_" + String(start_time);
-    msg2 = "";
-    char *x = (char *)msg.c_str();
-    internalclock = 0;
-    UdpSend(x, "192.168.0.200", 20001);
-    UdpWaitAndRecive();
-    avgClock = avgClock + internalclock;
-    prevMilies=millis();
-    while (millis() < prevMilies + delayTime) {
+  while (count < datapoints + 1 ) {
+    if (WiFi.status() == WL_CONNECTED) {
+      start_time = millis();
+      msg = String(count + datapoints) + "_" + String(start_time);
+      msg2 = "";
+      char *x = (char *)msg.c_str();
+      internalclock = 0;
+      UdpSend(x, "192.168.0.200", 20001);
+      UdpWaitAndRecive();
+      avgClock = avgClock + internalclock;
+      prevMilies = millis();
+      while (millis() < prevMilies + delayTime) {
 
-    }
-    count++; 
-    if (count == datapoints+1) {
-      String temp = "";
-      for (int i = 0; i < 21; i++) {
-        temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
       }
-      temp = temp + "_" + String(avgClock / datapoints)+ "_" + String(millis());
-      EEPROM.writeString(16, temp);
-      EEPROM.commit();
+      count++;
+      if (count == datapoints + 1) {
+        String temp = "";
+        for (int i = 0; i < 21; i++) {
+          temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
+        }
+        temp = temp + "_" + String(avgClock / datapoints) + "_" + String(millis());
+        EEPROM.writeString(20, temp);
+        int programCount = EEPROM.readInt(16);
+        programCount++;
+        EEPROM.writeInt(16, programCount);
+        EEPROM.commit();
+      }
+    }
+    else {
+      ESP.restart();
     }
   }
 }
@@ -109,7 +132,9 @@ void UdpWaitAndRecive() {
   timer = 0;
   bool flag = false;
   while (timer < timeout) {
+
     int packetSize = udp.parsePacket();
+
     if (packetSize) {
       len = udp.read(incomingPacket, 255);
       if (len > 0) {
@@ -131,7 +156,7 @@ void UdpWaitAndRecive() {
   if (!flag) {
     Serial.println("timeout");
   }
-  if (time_diff <101) {
+  if (time_diff < 101) {
 
     // Serial.println(msg);
     if (time_diff < 5) {
