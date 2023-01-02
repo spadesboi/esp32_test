@@ -19,6 +19,7 @@ int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 
 int delayTime = 500;
 int prevMilies = 0;
 int datapoints = 1000;
+int signalStrngth=0;
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
@@ -76,6 +77,7 @@ void setup() {
   Serial.println(WiFi.localIP());
    Serial.print("wifi strength ");
   Serial.println(WiFi.RSSI());
+  signalStrngth=signalStrngth+WiFi.RSSI();
   udp.begin(udpPort);
   int randDelay = random(400, 1000);
   prevMilies = millis();
@@ -87,6 +89,7 @@ void setup() {
 void loop() {
   while (count < datapoints + 1 ) {
     if (WiFi.status() == WL_CONNECTED) {
+      signalStrngth=signalStrngth+WiFi.RSSI();
       start_time = millis();
       msg = String(count + datapoints) + "_" + String(start_time);
       msg2 = "";
@@ -105,7 +108,7 @@ void loop() {
         for (int i = 0; i < 21; i++) {
           temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
         }
-        temp = temp + "_" + String(avgClock / datapoints) + "_" + String(millis());
+        temp = temp + "_" + String(avgClock / datapoints) + "_" + String(millis()+"_" + String(signalStrngth);
         EEPROM.writeString(20, temp);
         int programCount = EEPROM.readInt(16);
         programCount++;
