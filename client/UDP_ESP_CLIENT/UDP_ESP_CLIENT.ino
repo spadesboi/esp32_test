@@ -16,13 +16,16 @@ int len = 0;
 int avgClock = 0;
 int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int delayTime = 100;
+int delayTime = 500;
 int prevMilies = 0;
-int datapoints = 10000;
-int signalStrngth=0;
+int datapoints = 100000;
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
+int disconnects = 0;
+uint32_t disconnects_time = 0;
+uint32_t disconnect_avg_time = 0;
+uint32_t disconnect_avg_time_final = 0;
 WiFiUDP udp;
 // AsyncUDP udp;
 elapsedMillis timer;
@@ -65,19 +68,15 @@ void setup() {
     if (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
-    }
-    else {
+    } else {
       i = 10;
     }
   }
-  Serial.println( millis());
+  Serial.println(millis());
   Serial.print("Connected");
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-   Serial.print("wifi strength ");
-  Serial.println(WiFi.RSSI());
-  signalStrngth=signalStrngth+WiFi.RSSI();
   udp.begin(udpPort);
   int randDelay = random(400, 1000);
   prevMilies = millis();
@@ -87,10 +86,9 @@ void setup() {
 
 
 void loop() {
-  while (count < datapoints + 1 ) {
+  while (count < datapoints + 1) {
+    start_time = millis();
     if (WiFi.status() == WL_CONNECTED) {
-      signalStrngth=signalStrngth+WiFi.RSSI();
-      start_time = millis();
       msg = String(count + datapoints) + "_" + String(start_time);
       msg2 = "";
       char *x = (char *)msg.c_str();
@@ -100,24 +98,33 @@ void loop() {
       avgClock = avgClock + internalclock;
       prevMilies = millis();
       while (millis() < prevMilies + delayTime) {
-
       }
       count++;
-      if (count == datapoints + 1) {
+      if ((count % 201) == 0) {  //count == datapoints + 1
+        if (disconnects) {
+          disconnect_avg_time_final = disconnect_avg_time / disconnects;
+        }
         String temp = "";
         for (int i = 0; i < 21; i++) {
           temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
         }
-        temp = temp + "_" + String(avgClock / datapoints) + "_" + String(millis()+"_" + String(signalStrngth));
+        // Add for i=0, packet loss, divide by count, and store on EEPROM
+        temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final);
+
+        // temp = temp + "__" + String(avgClock / count) + "_" + String(millis()) + "_" + String(disconnects) + "_" + String(disconnect_avg_time_final);
         EEPROM.writeString(20, temp);
         int programCount = EEPROM.readInt(16);
         programCount++;
         EEPROM.writeInt(16, programCount);
         EEPROM.commit();
       }
-    }
-    else {
-      ESP.restart();
+    } else {
+      disconnects = disconnects + 1;
+      while (WiFi.status() != WL_CONNECTED) {
+      }
+      disconnects_time = millis() - start_time;
+      //  = ((disconnects - 1) * disconnect_avg_time + disconnects_time) / disconnects
+      disconnect_avg_time = disconnect_avg_time + disconnects_time;
     }
   }
 }
