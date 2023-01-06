@@ -26,6 +26,7 @@ int disconnects = 0;
 uint32_t disconnects_time = 0;
 uint32_t disconnect_avg_time = 0;
 uint32_t disconnect_avg_time_final = 0;
+uint32_t reconnect_time = 0;
 WiFiUDP udp;
 elapsedMillis timer;
 elapsedMillis internalclock;
@@ -88,8 +89,8 @@ void loop() {
   while (count < datapoints + 1) {
     start_time = millis();
     if (WiFi.status() == WL_CONNECTED) {
-      Serial.println(WiFi.RSSI());
-      if (WiFi.RSSI() > -40) {       
+      // Serial.println(WiFi.RSSI());
+      if (WiFi.RSSI() > -55) {
         msg = String(count + datapoints) + "_" + String(start_time);
         msg2 = "";
         char *x = (char *)msg.c_str();
@@ -101,7 +102,7 @@ void loop() {
         while (millis() < prevMilies + delayTime) {
         }
         count++;
-        if ((count % 21) == 0) {  //count == datapoints + 1
+        if ((count % 201) == 0) {  //count == datapoints + 1
           if (disconnects) {
             disconnect_avg_time_final = disconnect_avg_time / disconnects;
           }
@@ -110,10 +111,7 @@ void loop() {
             temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
           }
           // Add for i=0, packet loss, divide by count, and store on EEPROM
-          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_"+String(WiFi.BSSIDstr())+"_" + String(EEPROM.readInt(12));
-          ;
-
-          // temp = temp + "__" + String(avgClock / count) + "_" + String(millis()) + "_" + String(disconnects) + "_" + String(disconnect_avg_time_final);
+          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
           EEPROM.writeString(20, temp);
           int programCount = EEPROM.readInt(16);
           programCount++;
@@ -122,12 +120,12 @@ void loop() {
           int httpCode = http.POST(temp);
           if (httpCode > 0) {
             // HTTP header has been send and Server response header has been handled
-            Serial.println(httpCode);
+            // Serial.println(httpCode);
 
             // file found at server
             if (httpCode == HTTP_CODE_OK) {
               String payload = http.getString();
-              Serial.println(payload);
+              // Serial.println(payload);
             }
           } else {
             Serial.println(http.errorToString(httpCode).c_str());
@@ -138,24 +136,25 @@ void loop() {
       }
     } else {
       disconnects = disconnects + 1;
-      Serial.println("disconnected");
-      Serial.println(WiFi.BSSIDstr());
+      // Serial.println("disconnected");
+      // Serial.println(WiFi.BSSIDstr());
       WiFi.reconnect();
       for (int i = 0; i < 7; i++) {
         if (i == 6) {
           WiFi.reconnect();
         }
+        reconnect_time = millis();
         if (WiFi.status() != WL_CONNECTED) {
-          delay(500);
+          while (millis() - reconnect_time < 100) {
+          }
           Serial.print(".");
         } else {
           i = 10;
         }
       }
-      Serial.println(WiFi.BSSIDstr());
+      // Serial.println(WiFi.BSSIDstr());
 
       disconnects_time = millis() - start_time;
-      //  = ((disconnects - 1) * disconnect_avg_time + disconnects_time) / disconnects
       disconnect_avg_time = disconnect_avg_time + disconnects_time;
     }
   }
