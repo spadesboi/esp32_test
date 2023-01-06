@@ -5,8 +5,6 @@
 #include <EEPROM.h>
 #include <HTTPClient.h>
 
-// #include "AsyncUDP.h"
-
 const char *udpAddress = "192.168.0.200";
 const int udpPort = 20001;
 String msg = "";
@@ -29,13 +27,10 @@ uint32_t disconnects_time = 0;
 uint32_t disconnect_avg_time = 0;
 uint32_t disconnect_avg_time_final = 0;
 WiFiUDP udp;
-// AsyncUDP udp;
 elapsedMillis timer;
 elapsedMillis internalclock;
 HTTPClient http;
 void setup() {
-
-
   setCpuFrequencyMhz(240);
   Serial.begin(115200);
   if (!EEPROM.begin(1000)) {
@@ -63,7 +58,6 @@ void setup() {
   WiFi.begin("TP-Link_B61A", "msort@flexli");
 
   Serial.println("");
-
   // Wait for connection
   for (int i = 0; i < 7; i++) {
     if (i == 6) {
@@ -94,53 +88,72 @@ void loop() {
   while (count < datapoints + 1) {
     start_time = millis();
     if (WiFi.status() == WL_CONNECTED) {
-    
-      msg = String(count + datapoints) + "_" + String(start_time);
-      msg2 = "";
-      char *x = (char *)msg.c_str();
-      internalclock = 0;
-      UdpSend(x, "192.168.0.200", 20001);
-      UdpWaitAndRecive();
-      avgClock = avgClock + internalclock;
-      prevMilies = millis();
-      while (millis() < prevMilies + delayTime) {
-      }
-      count++;
-      if ((count % 21) == 0) {  //count == datapoints + 1
-        if (disconnects) {
-          disconnect_avg_time_final = disconnect_avg_time / disconnects;
+      Serial.println(WiFi.RSSI());
+      if (WiFi.RSSI() > -40) {       
+        msg = String(count + datapoints) + "_" + String(start_time);
+        msg2 = "";
+        char *x = (char *)msg.c_str();
+        internalclock = 0;
+        UdpSend(x, "192.168.0.200", 20001);
+        UdpWaitAndRecive();
+        avgClock = avgClock + internalclock;
+        prevMilies = millis();
+        while (millis() < prevMilies + delayTime) {
         }
-        String temp = "";
-        for (int i = 0; i < 21; i++) {
-          temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
-        }
-        // Add for i=0, packet loss, divide by count, and store on EEPROM
-        temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final)+"_"+String(EEPROM.readInt(12));;
-
-        // temp = temp + "__" + String(avgClock / count) + "_" + String(millis()) + "_" + String(disconnects) + "_" + String(disconnect_avg_time_final);
-        EEPROM.writeString(20, temp);
-        int programCount = EEPROM.readInt(16);
-        programCount++;
-        EEPROM.writeInt(16, programCount);
-        EEPROM.commit();
-        int httpCode = http.POST(temp);
-        if (httpCode > 0) {
-          // HTTP header has been send and Server response header has been handled
-          Serial.println( httpCode);
-
-          // file found at server
-          if (httpCode == HTTP_CODE_OK) {
-            String payload = http.getString();
-            Serial.println(payload);
+        count++;
+        if ((count % 21) == 0) {  //count == datapoints + 1
+          if (disconnects) {
+            disconnect_avg_time_final = disconnect_avg_time / disconnects;
           }
-        } else {
-          Serial.println(http.errorToString(httpCode).c_str());
+          String temp = "";
+          for (int i = 0; i < 21; i++) {
+            temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
+          }
+          // Add for i=0, packet loss, divide by count, and store on EEPROM
+          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_"+String(WiFi.BSSIDstr())+"_" + String(EEPROM.readInt(12));
+          ;
+
+          // temp = temp + "__" + String(avgClock / count) + "_" + String(millis()) + "_" + String(disconnects) + "_" + String(disconnect_avg_time_final);
+          EEPROM.writeString(20, temp);
+          int programCount = EEPROM.readInt(16);
+          programCount++;
+          EEPROM.writeInt(16, programCount);
+          EEPROM.commit();
+          int httpCode = http.POST(temp);
+          if (httpCode > 0) {
+            // HTTP header has been send and Server response header has been handled
+            Serial.println(httpCode);
+
+            // file found at server
+            if (httpCode == HTTP_CODE_OK) {
+              String payload = http.getString();
+              Serial.println(payload);
+            }
+          } else {
+            Serial.println(http.errorToString(httpCode).c_str());
+          }
         }
+      } else {
+        WiFi.disconnect();
       }
     } else {
       disconnects = disconnects + 1;
-      while (WiFi.status() != WL_CONNECTED) {
+      Serial.println("disconnected");
+      Serial.println(WiFi.BSSIDstr());
+      WiFi.reconnect();
+      for (int i = 0; i < 7; i++) {
+        if (i == 6) {
+          WiFi.reconnect();
+        }
+        if (WiFi.status() != WL_CONNECTED) {
+          delay(500);
+          Serial.print(".");
+        } else {
+          i = 10;
+        }
       }
+      Serial.println(WiFi.BSSIDstr());
+
       disconnects_time = millis() - start_time;
       //  = ((disconnects - 1) * disconnect_avg_time + disconnects_time) / disconnects
       disconnect_avg_time = disconnect_avg_time + disconnects_time;
