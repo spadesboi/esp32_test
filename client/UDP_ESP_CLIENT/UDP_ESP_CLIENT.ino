@@ -14,6 +14,7 @@ uint32_t time_diff = 0;
 uint32_t count = 0;
 int len = 0;
 int avgClock = 0;
+int timeoutCount = 0;
 int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 int delayTime = 500;
@@ -90,7 +91,13 @@ void loop() {
     start_time = millis();
     if (WiFi.status() == WL_CONNECTED) {
       // Serial.println(WiFi.RSSI());
-      if (WiFi.RSSI() > -55) {
+      int signalStrenght = WiFi.RSSI();
+      if (signalStrenght > -70) {
+        // Serial.print("Signal: ");
+        // Serial.println(signalStrenght);
+
+        // Serial.println(WiFi.BSSIDstr());
+
         msg = String(count + datapoints) + "_" + String(start_time);
         msg2 = "";
         char *x = (char *)msg.c_str();
@@ -110,8 +117,10 @@ void loop() {
           for (int i = 0; i < 21; i++) {
             temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
           }
+
+
           // Add for i=0, packet loss, divide by count, and store on EEPROM
-          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
+          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(signalStrenght) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
           EEPROM.writeString(20, temp);
           int programCount = EEPROM.readInt(16);
           programCount++;
@@ -195,7 +204,9 @@ void UdpWaitAndRecive() {
     }
   }
   if (!flag) {
-    Serial.println("timeout");
+    timeoutCount++;
+    Serial.println("timeout " + String(timeoutCount));
+    // Serial.println(timeoutCount);
   }
   if (time_diff < 101) {
 
