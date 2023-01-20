@@ -28,6 +28,7 @@ uint32_t disconnects_time = 0;
 uint32_t disconnect_avg_time = 0;
 uint32_t disconnect_avg_time_final = 0;
 uint32_t reconnect_time = 0;
+uint32_t max_disconnect_time = 0;
 WiFiUDP udp;
 elapsedMillis timer;
 elapsedMillis internalclock;
@@ -120,7 +121,7 @@ void loop() {
 
 
           // Add for i=0, packet loss, divide by count, and store on EEPROM
-          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(signalStrenght) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
+          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(max_disconnect_time) + "_" + String(signalStrenght) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
           EEPROM.writeString(20, temp);
           int programCount = EEPROM.readInt(16);
           programCount++;
@@ -161,6 +162,9 @@ void loop() {
           }
         }
         disconnects_time = millis() - start_time;
+        if (disconnects_time > max_disconnect_time) {
+          max_disconnect_time = disconnects_time;
+        }
         disconnect_avg_time = disconnect_avg_time + disconnects_time;
       }
     } else {
@@ -185,6 +189,9 @@ void loop() {
       // Serial.println(WiFi.BSSIDstr());
 
       disconnects_time = millis() - start_time;
+      if (disconnects_time > max_disconnect_time) {
+        max_disconnect_time = disconnects_time;
+      }
       disconnect_avg_time = disconnect_avg_time + disconnects_time;
     }
   }
