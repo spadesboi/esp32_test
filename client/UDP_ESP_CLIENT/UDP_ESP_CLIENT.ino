@@ -90,13 +90,13 @@ void loop() {
   while (count < datapoints + 1) {
     start_time = millis();
     if (WiFi.status() == WL_CONNECTED) {
-      // Serial.println(WiFi.RSSI());
+      // Serial.println(WiFi.RSSI());  //comment
       int signalStrenght = WiFi.RSSI();
-      if (signalStrenght > -70) {
-        // Serial.print("Signal: ");
-        // Serial.println(signalStrenght);
+      if (signalStrenght > -55) {
+        // Serial.print("Signal: ");        //comment
+        // Serial.println(signalStrenght);  //comment
 
-        // Serial.println(WiFi.BSSIDstr());
+        // Serial.println(WiFi.BSSIDstr());  //comment
 
         msg = String(count + datapoints) + "_" + String(start_time);
         msg2 = "";
@@ -141,7 +141,27 @@ void loop() {
           }
         }
       } else {
+        disconnects = disconnects + 1;
         WiFi.disconnect();
+        while (WiFi.status() == WL_CONNECTED) {
+        }
+        WiFi.begin("TP-Link_B61A", "msort@flexli");
+        for (int i = 0; i < 7; i++) {
+          if (i == 6) {
+            WiFi.reconnect();
+            WiFi.begin("TP-Link_B61A", "msort@flexli");
+          }
+          reconnect_time = millis();
+          if (WiFi.status() != WL_CONNECTED) {
+            while (millis() - reconnect_time < 100) {
+            }
+            Serial.print(".");
+          } else {
+            i = 10;
+          }
+        }
+        disconnects_time = millis() - start_time;
+        disconnect_avg_time = disconnect_avg_time + disconnects_time;
       }
     } else {
       disconnects = disconnects + 1;
@@ -151,6 +171,7 @@ void loop() {
       for (int i = 0; i < 7; i++) {
         if (i == 6) {
           WiFi.reconnect();
+          WiFi.begin("TP-Link_B61A", "msort@flexli");
         }
         reconnect_time = millis();
         if (WiFi.status() != WL_CONNECTED) {
