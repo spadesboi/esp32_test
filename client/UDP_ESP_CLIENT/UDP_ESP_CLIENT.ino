@@ -17,9 +17,11 @@ int avgClock = 0;
 int timeoutCount = 0;
 int timeout = 100;
 int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int delayTime = 500;
+int delayTime = 100;
 int prevMilies = 0;
 int datapoints = 100000;
+int signalStrength = 0;
+bool flag = false;
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
@@ -33,6 +35,8 @@ WiFiUDP udp;
 elapsedMillis timer;
 elapsedMillis internalclock;
 HTTPClient http;
+
+
 void setup() {
   setCpuFrequencyMhz(240);
   Serial.begin(115200);
@@ -91,108 +95,117 @@ void loop() {
   while (count < datapoints + 1) {
     start_time = millis();
     if (WiFi.status() == WL_CONNECTED) {
-      // Serial.println(WiFi.RSSI());  //comment
-      int signalStrenght = WiFi.RSSI();
-      if (signalStrenght > -55) {
-        // Serial.print("Signal: ");        //comment
-        // Serial.println(signalStrenght);  //comment
-
-        // Serial.println(WiFi.BSSIDstr());  //comment
-
-        msg = String(count + datapoints) + "_" + String(start_time);
-        msg2 = "";
-        char *x = (char *)msg.c_str();
-        internalclock = 0;
-        UdpSend(x, "192.168.0.200", 20001);
-        UdpWaitAndRecive();
-        avgClock = avgClock + internalclock;
-        prevMilies = millis();
-        while (millis() < prevMilies + delayTime) {
-        }
-        count++;
-        if ((count % 201) == 0) {  //count == datapoints + 1
-          if (disconnects) {
-            disconnect_avg_time_final = disconnect_avg_time / disconnects;
-          }
-          String temp = "";
-          for (int i = 0; i < 21; i++) {
-            temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
-          }
-
-
-          // Add for i=0, packet loss, divide by count, and store on EEPROM
-          temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(max_disconnect_time) + "_" + String(signalStrenght) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
-          EEPROM.writeString(20, temp);
-          int programCount = EEPROM.readInt(16);
-          programCount++;
-          EEPROM.writeInt(16, programCount);
-          EEPROM.commit();
-          int httpCode = http.POST(temp);
-          if (httpCode > 0) {
-            // HTTP header has been send and Server response header has been handled
-            // Serial.println(httpCode);
-
-            // file found at server
-            if (httpCode == HTTP_CODE_OK) {
-              String payload = http.getString();
-              // Serial.println(payload);
-            }
-          } else {
-            Serial.println(http.errorToString(httpCode).c_str());
-          }
-        }
-      } else {
-        disconnects = disconnects + 1;
-        WiFi.disconnect();
-        while (WiFi.status() == WL_CONNECTED) {
-        }
-        WiFi.begin("TP-Link_B61A", "msort@flexli");
-        for (int i = 0; i < 7; i++) {
-          if (i == 6) {
-            WiFi.reconnect();
-            WiFi.begin("TP-Link_B61A", "msort@flexli");
-          }
-          reconnect_time = millis();
-          if (WiFi.status() != WL_CONNECTED) {
-            while (millis() - reconnect_time < 100) {
-            }
-            Serial.print(".");
-          } else {
-            i = 10;
-          }
-        }
-        disconnects_time = millis() - start_time;
-        if (disconnects_time > max_disconnect_time) {
-          max_disconnect_time = disconnects_time;
-        }
-        disconnect_avg_time = disconnect_avg_time + disconnects_time;
+      signalStrength = WiFi.RSSI();
+      msg = String(count + datapoints) + "_" + String(start_time);
+      msg2 = "";
+      char *x = (char *)msg.c_str();
+      internalclock = 0;
+      UdpSend(x, "192.168.0.200", 20001);
+      flag = false;
+      UdpWaitAndRecive();
+      avgClock = avgClock + internalclock;
+      prevMilies = millis();
+      while (millis() < prevMilies + delayTime) {
       }
+      count++;
+      if ((count % 201) == 0) {  //count == datapoints + 1
+        if (disconnects) {
+          disconnect_avg_time_final = disconnect_avg_time / disconnects;
+        }
+        String temp = "";
+        for (int i = 0; i < 21; i++) {
+          temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
+        }
+
+
+        // Add for i=0, packet loss, divide by count, and store on EEPROM
+        temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(max_disconnect_time) + "_" + String(signalStrength) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
+        EEPROM.writeString(20, temp);
+        int programCount = EEPROM.readInt(16);
+        programCount++;
+        EEPROM.writeInt(16, programCount);
+        EEPROM.commit();
+        int httpCode = http.POST(temp);
+        if (httpCode > 0) {
+          // HTTP header has been send and Server response header has been handled
+          // Serial.println(httpCode);
+
+          // file found at server
+          if (httpCode == HTTP_CODE_OK) {
+            String payload = http.getString();
+            // Serial.println(payload);
+          }
+        } else {
+          Serial.println(http.errorToString(httpCode).c_str());
+        }
+      }
+
+      //updated code to reconnect on the basis of packet loss
+      if (!flag) {
+        // Serial.print("Lost packets: ");   //comment
+        // Serial.println(dataArr[0]);   //comment
+        signalStrength = WiFi.RSSI();
+        // Serial.println(signalStrength);  //comment
+        if (signalStrength < -55) {
+          // Serial.print("Signal: ");         //comment
+          // Serial.println(signalStrength);   //comment
+          // Serial.println(WiFi.BSSIDstr());  //comment
+          WiFi.disconnect();
+          while (WiFi.status() == WL_CONNECTED) {
+          }
+          WiFi.begin("TP-Link_B61A", "msort@flexli");
+          for (int i = 0; i < 7; i++) {     //blocking till either connected or 500ms
+            if (i == 6) {
+              WiFi.disconnect();
+              while (WiFi.status() == WL_CONNECTED) {
+              }
+              WiFi.begin("TP-Link_B61A", "msort@flexli");
+            }
+            reconnect_time = millis();
+            if (WiFi.status() != WL_CONNECTED) {
+              while (millis() - reconnect_time < 100) {
+              }
+              // Serial.print(".");
+            } else {
+              i = 10;
+            }
+          }
+          disconnects_time = millis() - start_time;
+          if (disconnects_time > max_disconnect_time) {
+            max_disconnect_time = disconnects_time;
+          }
+          disconnect_avg_time = disconnect_avg_time + disconnects_time;
+          // Serial.println(WiFi.BSSIDstr());
+        }
+      }
+
     } else {
       disconnects = disconnects + 1;
-      // Serial.println("disconnected");
-      // Serial.println(WiFi.BSSIDstr());
-      WiFi.reconnect();
-      for (int i = 0; i < 7; i++) {
+      Serial.println(WiFi.BSSIDstr());
+      WiFi.disconnect();
+      while (WiFi.status() == WL_CONNECTED) {
+      }
+      WiFi.begin("TP-Link_B61A", "msort@flexli");
+      for (int i = 0; i < 7; i++) {     //blocking till either connected or 500ms
         if (i == 6) {
-          WiFi.reconnect();
+          WiFi.disconnect();
           WiFi.begin("TP-Link_B61A", "msort@flexli");
         }
         reconnect_time = millis();
         if (WiFi.status() != WL_CONNECTED) {
           while (millis() - reconnect_time < 100) {
           }
-          Serial.print(".");
+          // Serial.print(".");
         } else {
           i = 10;
         }
       }
-      // Serial.println(WiFi.BSSIDstr());
-
       disconnects_time = millis() - start_time;
       if (disconnects_time > max_disconnect_time) {
         max_disconnect_time = disconnects_time;
       }
       disconnect_avg_time = disconnect_avg_time + disconnects_time;
+      // Serial.println(WiFi.BSSIDstr());
     }
   }
 }
@@ -208,7 +221,7 @@ void UdpSend(const char *message, const char *ipaddress, int port) {
 void UdpWaitAndRecive() {
   char incomingPacket[255];
   timer = 0;
-  bool flag = false;
+  // bool flag = false;
   while (timer < timeout) {
 
     int packetSize = udp.parsePacket();
@@ -233,7 +246,7 @@ void UdpWaitAndRecive() {
   }
   if (!flag) {
     timeoutCount++;
-    Serial.println("timeout " + String(timeoutCount));
+    // Serial.println("timeout " + String(timeoutCount));
     // Serial.println(timeoutCount);
   }
   if (time_diff < 101) {
