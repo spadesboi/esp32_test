@@ -1,3 +1,11 @@
+/*
+//              This code is only for testing purposes, it has scope for cleaning up and reducing code
+//              but that is not the main goal of this program. This exact code has been implemented and
+//              tested vigorously for different networking cases, documentation can be found here https://docs.google.com/document/d/1sb1OvSUDNEbbsOGarEihRbbwJHN0u8XkJnFvu_x6hfc/edit?usp=sharing
+//              For more detailed results and data refer to the following link, https://docs.google.com/spreadsheets/d/1Z7HOo94GeRYyIfOGGlbkMw6JOHjLclBOYo3_hFHk3NU/edit?usp=sharing
+//              Do NOT attempt to modify this code and then validate your results with the documented results.
+*/
+
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <elapsedMillis.h>
@@ -15,20 +23,20 @@ uint32_t count = 0;
 int len = 0;
 int avgClock = 0;
 int timeoutCount = 0;
-int timeout = 100;
-int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int delayTime = 500;
+int timeout = 100;                                                                        // 100ms timeout for UdpWaitAndRecive function
+int dataArr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };        // To store the number of packets for different latency intervals
+int delayTime = 500;                                                                      // Time after which a new packet is sent
 int prevMilies = 0;
-int datapoints = 100000;
+int datapoints = 100000;                                                                  // Total number of packets sent after which program stops
 int signalStrength = 0;
-bool flag = false;
+bool flag = false;                                                                        // Flag to check if packet is lost
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(192, 168, 0, 1);
 int disconnects = 0;
 uint32_t disconnects_time = 0;
-uint32_t disconnect_avg_time = 0;
-uint32_t disconnect_avg_time_final = 0;
+uint32_t disconnect_avg_time = 0;                                                         // Stores the summation of all disconnect times
+uint32_t disconnect_avg_time_final = 0;                                                   // Averages "disconnect_avg_time" over loop counter "count"
 uint32_t reconnect_time = 0;
 uint32_t max_disconnect_time = 0;
 WiFiUDP udp;
@@ -61,7 +69,6 @@ void setup() {
   if (WiFi.config(staticIP, gateway, subnet, dns, dns) == false) {
     Serial.println("Configuration failed.");
   }
-  // udp.setTimeout(100);
   WiFi.begin("TP-Link_B61A", "msort@flexli");
 
   Serial.println("");
@@ -86,7 +93,7 @@ void setup() {
   udp.begin(udpPort);
   int randDelay = random(400, 1000);
   prevMilies = millis();
-  while (millis() < prevMilies + randDelay) {
+  while (millis() < prevMilies + randDelay) {                                             // Giving a random delay so that all ESP do not start at the same time
   }
 }
 
@@ -97,40 +104,40 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED) {
       // Serial.println(WiFi.RSSI());  //COMMENT
       signalStrength = WiFi.RSSI();
-      if (signalStrength > -65) {
+      if (signalStrength > -65) {                                                         // Setting a signal strength threshold of -65dB
         // Serial.print("Signal: ");        //COMMENT
         // Serial.println(signalStrength);  //COMMENT
         // Serial.println(WiFi.BSSIDstr());  //COMMENT
-        msg = String(count + datapoints) + "_" + String(start_time);
+        msg = String(count + datapoints) + "_" + String(start_time);                      // Payload of UDP packet, includes the count (in the form of count + data points) and the time at which the loop started
         msg2 = "";
-        char *x = (char *)msg.c_str();
+        char *x = (char *)msg.c_str();                                                    // Changing data type to a form that UDP library can take as an argument
         internalclock = 0;
         UdpSend(x, "192.168.0.200", 20001);
         flag = false;
         UdpWaitAndRecive();
-        avgClock = avgClock + internalclock;
+        avgClock = avgClock + internalclock;                                              // Variable to store summation of latency of UDP packets between ESP and server
         prevMilies = millis();
-        while (millis() < prevMilies + delayTime) {
+        while (millis() < prevMilies + delayTime) {                                       // Adding a delay of "delayTime" every loop
         }
         count++;
-        if ((count % 201) == 0) {  //count == datapoints + 1
+        if ((count % 201) == 0) {                                                         // Every 200 packets sent, an HTTP message is sent to the server containing the statistics of the data up until this point
           if (disconnects) {
             disconnect_avg_time_final = disconnect_avg_time / disconnects;
           }
           String temp = "";
-          for (int i = 0; i < 21; i++) {
+          for (int i = 0; i < 21; i++) {                                                  // Adding all latency data to a string from 0 to 100ms
             temp = temp + "_" + String(i) + ":" + String(dataArr[i]);
           }
 
 
-          // Add for i=0, packet loss, divide by count, and store on EEPROM
+          // Add average latency, packet loss %, time elapsed since start of ESP, number of disconnects, avg disconnect time, maximum disconnect time, signal strength and MAC address connected to in this loop, and the last 3 number of the ESP's IP
           temp = temp + "__" + String(avgClock / count) + "_" + String((dataArr[0] / float(count)) * 100.0) + "%__" + String(millis()) + "__" + String(disconnects) + "_" + String(disconnect_avg_time_final) + "_" + String(max_disconnect_time) + "_" + String(signalStrength) + "_" + String(WiFi.BSSIDstr()) + "_" + String(EEPROM.readInt(12));
           EEPROM.writeString(20, temp);
           int programCount = EEPROM.readInt(16);
           programCount++;
           EEPROM.writeInt(16, programCount);
           EEPROM.commit();
-          int httpCode = http.POST(temp);
+          int httpCode = http.POST(temp);                                                 // Sending HTTP POST request
           if (httpCode > 0) {
             // HTTP header has been send and Server response header has been handled
             // Serial.println(httpCode);
@@ -145,24 +152,23 @@ void loop() {
           }
         }
 
-        //updated code to reconnect on the basis of packet loss
-        if (!flag) {
+        if (!flag) {                                                                      // In case of a packet loss
           // Serial.println("Packet lost, checking signal strength");  //COMMENT
           // Serial.print("Lost packets: ");   //comment
           // Serial.println(dataArr[0]);   //comment
           signalStrength = WiFi.RSSI();
           // Serial.println(signalStrength);  //comment
-          if (signalStrength < -55) {
+          if (signalStrength < -55) {                                                     // Signal threshold here is -55
             // Serial.println("Signal strength LOW");  //COMMENT
             // Serial.print("Signal: ");               //COMMENT
             // Serial.println(signalStrength);         //COMMENT
             // Serial.println(WiFi.BSSIDstr());        //COMMENT
             WiFi.disconnect();
-            while (WiFi.status() == WL_CONNECTED) {
+            while (WiFi.status() == WL_CONNECTED) {                                       // Wait until disconnected
             }
             WiFi.begin("TP-Link_B61A", "msort@flexli");
             int disconnect_loop_count = 0;
-            for (int i = 0; i <= 7; i++) {  //blocking till connected within 1500ms or restart
+            for (int i = 0; i <= 7; i++) {                                                // Blocking till connected within 1800ms or restart
               if (i == 6) {
                 WiFi.disconnect();
                 while (WiFi.status() == WL_CONNECTED) {
@@ -193,7 +199,7 @@ void loop() {
             // Serial.println(WiFi.BSSIDstr());
           }
         }
-      } else {
+      } else {                                                                            // Same logic as the other disconnect loops
         disconnects = disconnects + 1;
         // Serial.println("Signal strength lower than -65");  //COMMENT
         // Serial.println(WiFi.BSSIDstr());                   //COMMENT
@@ -202,7 +208,7 @@ void loop() {
         }
         WiFi.begin("TP-Link_B61A", "msort@flexli");
         int disconnect_loop_count = 0;
-        for (int i = 0; i <= 7; i++) {  //blocking till connected within 1500ms or restart
+        for (int i = 0; i <= 7; i++) {                                                    // Blocking till connected within 1800ms or restart
           if (i == 6) {
             WiFi.disconnect();
             while (WiFi.status() == WL_CONNECTED) {
@@ -233,7 +239,7 @@ void loop() {
         // Serial.println(WiFi.BSSIDstr());
       }
 
-    } else {
+    } else {                                                                              // If WiFi not connected, initate a disconnect loop
       disconnects = disconnects + 1;
       // Serial.println("WiFi not connected, main loop");  //COMMENT
       // Serial.println(WiFi.BSSIDstr());                  //COMMENT
@@ -242,7 +248,7 @@ void loop() {
       }
       WiFi.begin("TP-Link_B61A", "msort@flexli");
       int disconnect_loop_count = 0;
-      for (int i = 0; i <= 7; i++) {  //blocking till connected within 1500ms or restart
+      for (int i = 0; i <= 7; i++) {                                                      // Blocking till connected within 1500ms or restart
         if (i == 6) {
           WiFi.disconnect();
           while (WiFi.status() == WL_CONNECTED) {
@@ -276,32 +282,32 @@ void loop() {
 }
 
 
-void UdpSend(const char *message, const char *ipaddress, int port) {
+void UdpSend(const char *message, const char *ipaddress, int port) {                      // Function to send UDP packet
   udp.beginPacket(ipaddress, port);
   udp.print(message);
-  udp.endPacket();
+  udp.endPacket();                                                                        // Prepares the packet and sends it to the ipaddress and port specified
 }
 
 
-void UdpWaitAndRecive() {
+void UdpWaitAndRecive() {                                                                 // Waits for any packet, restarts timer if wrong packet is received, if no packet is received with timer, packet is considered to be lost
   char incomingPacket[255];
-  timer = 0;
+  timer = 0;                                                                              // elaspedMillis object
   // bool flag = false;
-  while (timer < timeout) {
+  while (timer < timeout) {                                                               // timeout set to 100ms
 
     int packetSize = udp.parsePacket();
 
     if (packetSize) {
       len = udp.read(incomingPacket, 255);
       if (len > 0) {
-        incomingPacket[len] = 0;
+        incomingPacket[len] = 0;                                                          // Setting only the position of array after length of packet as 0, or else grabage characters in that position will give undefined errors
       }
-      if (String(incomingPacket) == msg) {
-        time_diff = millis() - start_time;
+      if (String(incomingPacket) == msg) {                                                // Checking to see if incomingPacket is the packet we sent in this loop
+        time_diff = millis() - start_time;                                                // Calculating latency for ESP to send and receieve packet
         msg = msg + "_" + String(time_diff);
         timer = timeout;
         flag = true;
-      } else {
+      } else {                                                                            // timer reset to 0 if wrong packet is received
         msg2 = msg + "_" + String(millis() - start_time);
         // Serial.print("discarded packet : ");
         // Serial.println(String(incomingPacket));
@@ -309,12 +315,12 @@ void UdpWaitAndRecive() {
       }
     }
   }
-  if (!flag) {
+  if (!flag) {                                                                            // If packet loss has ocurred, increment timeoutCount variable
     timeoutCount++;
     // Serial.println("timeout " + String(timeoutCount));
     // Serial.println(timeoutCount);
   }
-  if (time_diff < 101) {
+  if (time_diff < 101) {                                                                  // Conditions to increment dataArr[x] according to the latency obtained
 
     // Serial.println(msg);
     if (time_diff < 5) {
