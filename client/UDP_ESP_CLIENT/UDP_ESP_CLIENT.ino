@@ -31,7 +31,7 @@ int datapoints = 100000;                                                        
 int signalStrength = 0;
 bool flag = false;                                                                        // Flag to check if packet is lost
 IPAddress gateway(192, 168, 0, 1);
-IPAddress subnet(255, 255, 255, 0);
+IPAddress subnet(255, 255, 0, 0);
 IPAddress dns(192, 168, 0, 1);
 int disconnects = 0;
 uint32_t disconnects_time = 0;
@@ -90,6 +90,8 @@ void setup() {
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  Serial.print("Mac Address: ");
+  Serial.println(WiFi.macAddress());
   udp.begin(udpPort);
   int randDelay = random(400, 1000);
   prevMilies = millis();
@@ -159,6 +161,7 @@ void loop() {
           signalStrength = WiFi.RSSI();
           // Serial.println(signalStrength);  //comment
           if (signalStrength < -55) {                                                     // Signal threshold here is -55
+            disconnects = disconnects + 1;
             // Serial.println("Signal strength LOW");  //COMMENT
             // Serial.print("Signal: ");               //COMMENT
             // Serial.println(signalStrength);         //COMMENT
